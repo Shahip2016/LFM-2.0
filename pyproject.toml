@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "lfm2"
+version = "0.1.0"
+description = "LFM2: Liquid Foundation Models — PyTorch Implementation"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Shahip2016", email = "shahip2016@gmail.com"},
+]
+dependencies = [
+    "torch>=2.1.0",
+    "einops>=0.7.0",
+    "tiktoken>=0.6.0",
+    "safetensors>=0.4.0",
+    "numpy>=1.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "ruff",
+]
+train = [
+    "wandb",
+    "tqdm",
+    "datasets",
+    "transformers",
+]
+vision = [
+    "torchvision",
+    "Pillow",
+]
+
+[tool.setuptools.packages.find]
+include = ["lfm2*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
