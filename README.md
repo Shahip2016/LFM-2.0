@@ -10,16 +10,36 @@ LFM2 is a family of Liquid Foundation Models designed for efficient on-device de
 pip install -e .
 ```
 
-## Project Structure
+## Usage
 
+### 1. Initialization
+```python
+from lfm2.model.configs import LFM2_350M
+from lfm2.model.backbone import LFM2Model
+
+config = LFM2_350M
+model = LFM2Model(config)
 ```
-lfm2/
-  model/       — Architecture components (backbone, attention, convolution, MoE)
-  training/    — Training infrastructure (distillation, alignment, merging)
-  utils/       — Utility functions
-tests/         — Unit and integration tests
-scripts/       — Training and inference entry points
-examples/      — Usage examples
+
+### 2. Inference
+Use the provided generation script:
+```bash
+python scripts/generate.py --model lfm2-350m --prompt "Hello LFM2"
+```
+
+### 3. Training with Distillation
+```python
+from lfm2.training.trainer import LFM2Trainer
+trainer = LFM2Trainer(model, teacher_model=teacher)
+metrics = trainer.train_step(input_ids, labels)
+```
+
+### 4. Multimodal (LFM2-VL)
+```python
+from lfm2.model.vlm import LFM2VL
+vlm = LFM2VL(model)
+# pixel_values should be preprocessed by ImagePreprocessor
+output = vlm(input_ids, pixel_values=pixel_values)
 ```
 
 ## Citation
