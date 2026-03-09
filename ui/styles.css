@@ -95,6 +95,7 @@ header {
     font-weight: 600;
     margin-bottom: 1.5rem;
     background: linear-gradient(135deg, #fff 0%, var(--accent-primary) 50%, var(--accent-secondary) 100%);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     animation: fadeIn 1s ease-out;
@@ -157,10 +158,13 @@ select, input[type="range"] {
     color: var(--text-main);
     padding: 0.8rem;
     outline: none;
+    appearance: none;
+    -webkit-appearance: none;
 }
 
 input[type="range"] {
     height: 4px;
+    appearance: none;
     -webkit-appearance: none;
     background: rgba(255, 255, 255, 0.1);
     cursor: pointer;
@@ -194,7 +198,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .input-panel textarea {
     width: 100%;
-    height: 200px;
+    height: 150px;
     background: transparent;
     border: none;
     color: var(--text-main);
@@ -203,6 +207,49 @@ input[type="range"]::-webkit-slider-thumb {
     line-height: 1.6;
     resize: none;
     outline: none;
+}
+
+.output-panel {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+}
+
+.output-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+}
+
+.output-content {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    font-family: var(--font-mono);
+    line-height: 1.6;
+    min-height: 200px;
+    white-space: pre-wrap;
+}
+
+.placeholder-text {
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+.cursor {
+    display: inline-block;
+    width: 8px;
+    height: 16px;
+    background: var(--accent-primary);
+    margin-left: 2px;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
 }
 
 .status-bar {
