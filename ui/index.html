@@ -26,6 +26,33 @@
                 <h1>Next-Gen Liquid Intelligence</h1>
                 <p>Experience the power of Gated Short Convolutions and GQA in our most advanced Foundation Model yet.</p>
             </section>
+
+            <section class="playground">
+                <div class="controls-panel glass-card">
+                    <h3>Model Configuration</h3>
+                    <div class="control-group">
+                        <label>Model Version</label>
+                        <select id="model-select">
+                            <option value="lfm2-350m">LFM 2.0 350M</option>
+                            <option value="lfm2-700m">LFM 2.0 700M</option>
+                            <option value="lfm2-1.3b">LFM 2.0 1.3B</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Max Tokens: <span id="token-value">50</span></label>
+                        <input type="range" id="token-range" min="10" max="500" value="50">
+                    </div>
+                    <div class="control-group">
+                        <label>Temperature: <span id="temp-value">0.7</span></label>
+                        <input type="range" id="temp-range" min="0" max="1.5" step="0.1" value="0.7">
+                    </div>
+                    <button id="generate-btn" class="primary-btn">Generate Response</button>
+                </div>
+
+                <div class="input-panel glass-card">
+                    <textarea id="prompt-input" placeholder="Enter your prompt here..."></textarea>
+                </div>
+            </section>
         </main>
 
         <footer>
