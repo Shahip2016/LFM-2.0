@@ -132,16 +132,18 @@ class MoELayer(nn.Module):
             SwiGLU(dim, hidden_dim=expert_hidden_dim) for _ in range(n_experts)
         ])
 
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor, lb_lb_coef: float = 0.1) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Forward pass with expert routing.
 
         Args:
             x: Input tensor of shape ``(batch, seq_len, dim)``.
+            lb_lb_coef: Scaling coefficient for load balancing loss.
 
         Returns:
             Tuple of:
             - Output tensor ``(batch, seq_len, dim)``.
-            - Load balance loss (scalar).
+            - Scaled load balance loss (scalar).
+            - Expert utilization metrics ``(n_experts,)``.
         """
         batch, seq_len, dim = x.shape
         x_flat = x.view(-1, dim)  # (B*L, d)
@@ -151,10 +153,13 @@ class MoELayer(nn.Module):
 
         # Compute expert outputs
         output = torch.zeros_like(x_flat)
+        expert_utilization = torch.zeros(self.n_experts, device=x.device)
 
         for i, expert in enumerate(self.experts):
             # Find tokens routed to this expert
             mask = (indices == i).any(dim=-1)  # (B*L,)
+            expert_utilization[i] = mask.float().mean()
+            
             if not mask.any():
                 continue
 
@@ -168,7 +173,7 @@ class MoELayer(nn.Module):
             # Weighted accumulation
             output[mask] += expert_weight[mask].unsqueeze(-1) * expert_output
 
-        return output.view(batch, seq_len, dim), lb_loss
+        return output.view(batch, seq_len, dim), lb_loss * lb_lb_coef, expert_utilization
 
 
 class MoEBlock(nn.Module):
@@ -202,16 +207,16 @@ class MoEBlock(nn.Module):
             expert_hidden_dim=expert_hidden_dim,
         )
 
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Forward pass.
 
         Args:
             x: Input tensor ``(batch, seq_len, dim)``.
 
         Returns:
-            Tuple of (output tensor, load balance loss).
+            Tuple of (output tensor, load balance loss, expert utilization).
         """
         residual = x
         h = self.norm(x)
-        moe_out, lb_loss = self.moe(h)
-        return residual + moe_out, lb_loss
+        moe_out, lb_loss, expert_utilization = self.moe(h)
+        return residual + moe_out, lb_loss, expert_utilization
