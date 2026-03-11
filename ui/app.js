@@ -54,5 +54,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
         generateBtn.disabled = false;
         generateBtn.textContent = 'Generate Response';
-    });
+    }); // end of generateBtn click listener
+
+    // Training Metrics Simulation
+    let currentLoss = 4.5;
+    let currentThroughput = 12000;
+
+    function updateMetrics() {
+        // Simulate training progress
+        currentLoss = Math.max(0.1, currentLoss - (Math.random() * 0.05));
+        currentThroughput = 12000 + (Math.random() * 1000 - 500);
+
+        const metrics = {
+            loss: currentLoss.toFixed(4),
+            throughput: Math.floor(currentThroughput).toLocaleString(),
+            tokens: (currentThroughput * 1.2).toFixed(0),
+            step: Math.floor(Date.now() / 1000) % 100000
+        };
+
+        const lossVal = document.getElementById('loss-val');
+        const throughputVal = document.getElementById('throughput-val');
+        const stepVal = document.getElementById('step-val');
+
+        if (lossVal) lossVal.textContent = metrics.loss;
+        if (throughputVal) throughputVal.textContent = metrics.throughput + ' tokens/sec';
+        if (stepVal) stepVal.textContent = metrics.step;
+    }
+
+    // Start simulation if dashboard exists
+    if (document.getElementById('loss-val') || document.getElementById('throughput-val')) {
+        setInterval(updateMetrics, 1000);
+        updateMetrics(); // Initial call
+        console.log("Dashboard simulation started.");
+    }
 });
