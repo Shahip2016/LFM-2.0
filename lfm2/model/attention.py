@@ -13,6 +13,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from typing import Optional, Union
 
 from .attention_utils import QKNorm
 from .normalization import RMSNorm
@@ -84,7 +85,8 @@ class GroupedQueryAttention(nn.Module):
         x: torch.Tensor,
         start_pos: int = 0,
         mask: torch.Tensor | None = None,
-    ) -> torch.Tensor:
+        kv_cache: Optional[KVCache] = None,
+    ) -> tuple[torch.Tensor, Optional[KVCache]]:
         """Forward pass.
 
         Args:
@@ -92,9 +94,10 @@ class GroupedQueryAttention(nn.Module):
             start_pos: Starting position for RoPE (used in KV-cache inference).
             mask: Optional attention mask of shape ``(seq_len, seq_len)``
                 or ``(batch, 1, seq_len, seq_len)``.
+            kv_cache: Optional KVCache object to store/retrieve keys and values.
 
         Returns:
-            Output tensor of shape ``(batch, seq_len, dim)``.
+            Tuple of (output tensor, updated kv_cache).
         """
         batch, seq_len, _ = x.shape
 
@@ -114,6 +117,10 @@ class GroupedQueryAttention(nn.Module):
         # Apply RoPE
         q, k = self.rope(q, k, start_pos=start_pos)
 
+        # Handle KV Cache
+        if kv_cache is not None:
+            k, v = kv_cache.update(k, v, start_pos)
+
         # Repeat KV heads if GQA
         k = self._repeat_kv(k)
         v = self._repeat_kv(v)
@@ -132,7 +139,24 @@ class GroupedQueryAttention(nn.Module):
 
         # Reshape and project output
         attn_output = attn_output.transpose(1, 2).contiguous().view(batch, seq_len, -1)
-        return self.o_proj(attn_output)
+        return self.o_proj(attn_output), kv_cache
+
+
+class KVCache:
+    """Key-Value Cache for incremental generation.
+    
+    Stores keys and values for attention layers across generation steps.
+    """
+    def __init__(self, batch_size: int, max_seq_len: int, n_kv_heads: int, head_dim: int, device: torch.device, dtype: torch.dtype):
+        self.k = torch.zeros((batch_size, n_kv_heads, max_seq_len, head_dim), device=device, dtype=dtype)
+        self.v = torch.zeros((batch_size, n_kv_heads, max_seq_len, head_dim), device=device, dtype=dtype)
+
+    def update(self, k: torch.Tensor, v: torch.Tensor, start_pos: int) -> tuple[torch.Tensor, torch.Tensor]:
+        """Update cache with new KV pairs and return concatenated history."""
+        seq_len = k.shape[2]
+        self.k[:, :, start_pos : start_pos + seq_len] = k
+        self.v[:, :, start_pos : start_pos + seq_len] = v
+        return self.k[:, :, : start_pos + seq_len], self.v[:, :, : start_pos + seq_len]
 
 
 class GQABlock(nn.Module):
@@ -189,19 +213,22 @@ class GQABlock(nn.Module):
         x: torch.Tensor,
         start_pos: int = 0,
         mask: torch.Tensor | None = None,
-    ) -> torch.Tensor:
+        kv_cache: Optional[KVCache] = None,
+    ) -> tuple[torch.Tensor, Optional[KVCache]]:
         """Forward with pre-norm and residual connections.
 
         Args:
             x: Input tensor ``(batch, seq_len, dim)``.
             start_pos: Starting position for RoPE.
             mask: Optional attention mask.
+            kv_cache: Optional KV cache.
 
         Returns:
-            Output tensor ``(batch, seq_len, dim)``.
+            Tuple of (output tensor, updated kv_cache).
         """
         # Attention sublayer
-        x = x + self.attn(self.attn_norm(x), start_pos=start_pos, mask=mask)
+        attn_out, kv_cache = self.attn(self.attn_norm(x), start_pos=start_pos, mask=mask, kv_cache=kv_cache)
+        x = x + attn_out
         # MLP sublayer
         x = x + self.mlp(self.mlp_norm(x))
-        return x
+        return x, kv_cache

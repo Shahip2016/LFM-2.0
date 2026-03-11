@@ -13,9 +13,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .attention import GQABlock
+from .attention import GQABlock, KVCache
 from .conv_block import GatedShortConvBlock
 from .normalization import RMSNorm
+from typing import Optional
 
 
 @dataclass
@@ -152,16 +153,20 @@ class LFM2Model(nn.Module):
     def forward(
         self,
         input_ids: torch.Tensor,
+        start_pos: int = 0,
+        kv_caches: list[Optional[KVCache]] | None = None,
         labels: torch.Tensor | None = None,
     ) -> "LFM2Output":
         """Forward pass.
 
         Args:
             input_ids: Token IDs of shape ``(batch, seq_len)``.
+            start_pos: Starting position for RoPE.
+            kv_caches: Optional list of KVCache objects, one for each attention layer.
             labels: Optional labels for next-token prediction loss.
 
         Returns:
-            ``LFM2Output`` with logits and optional loss.
+            ``LFM2Output`` with logits, optional loss, and updated caches.
         """
         batch, seq_len = input_ids.shape
         device = input_ids.device
@@ -170,12 +175,19 @@ class LFM2Model(nn.Module):
         h = self.tok_emb(input_ids)
 
         # Create causal mask for attention layers
-        mask = self._create_causal_mask(seq_len, device, h.dtype)
+        mask = None
+        if seq_len > 1:
+            mask = self._create_causal_mask(seq_len, device, h.dtype)
 
         # Pass through all layers
+        new_kv_caches = []
+        attn_layer_idx = 0
         for layer in self.layers:
             if isinstance(layer, GQABlock):
-                h = layer(h, mask=mask)
+                current_cache = kv_caches[attn_layer_idx] if kv_caches is not None else None
+                h, cache = layer(h, start_pos=start_pos, mask=mask, kv_cache=current_cache)
+                new_kv_caches.append(cache)
+                attn_layer_idx += 1
             else:
                 h = layer(h)
 
@@ -194,7 +206,7 @@ class LFM2Model(nn.Module):
                 ignore_index=-100,
             )
 
-        return LFM2Output(logits=logits, loss=loss)
+        return LFM2Output(logits=logits, loss=loss, kv_caches=new_kv_caches if new_kv_caches else None)
 
     @classmethod
     def from_config(cls, config: LFM2Config) -> "LFM2Model":
@@ -217,3 +229,4 @@ class LFM2Output:
 
     logits: torch.Tensor
     loss: torch.Tensor | None = None
+    kv_caches: list[Optional[KVCache]] | None = None
