@@ -15,6 +15,14 @@ def model_soup(models_states: List[Dict[str, torch.Tensor]], weights: List[float
         merged[key] = sum(m[key] * w for m, w in zip(models_states, weights))
     return merged
 
+def simple_average(models_states: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
+    """Averages parameters equally across models without specified weights."""
+    merged = {}
+    num_models = len(models_states)
+    for key in models_states[0].keys():
+        merged[key] = sum(m[key] for m in models_states) / num_models
+    return merged
+
 def task_arithmetic(
     base_state: Dict[str, torch.Tensor],
     models_states: List[Dict[str, torch.Tensor]],
