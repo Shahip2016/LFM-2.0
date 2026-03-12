@@ -17,9 +17,10 @@ class LFM2ColBERT(nn.Module):
     and projects them to a 128-dim space for efficient retrieval.
     """
     
-    def __init__(self, backbone: nn.Module, dim: int = 128):
+    def __init__(self, backbone: nn.Module, dim: int = 128, dropout: float = 0.0):
         super().__init__()
         self.backbone = backbone
+        self.dropout = nn.Dropout(dropout) if dropout > 0.0 else nn.Identity()
         # Linear layer projects from hidden_dim (1024 for 350M) to 128 dim
         self.proj = nn.Linear(backbone.config.d_model, dim, bias=False)
 
@@ -36,6 +37,9 @@ class LFM2ColBERT(nn.Module):
         # We stop before the LM head
         outputs = self.backbone(input_ids)
         h = outputs.logits # Simplification: assuming backbone returns hidden states or logits
+        
+        # apply dropout
+        h = self.dropout(h)
         
         # 2. Project to 128 dimensions
         embeddings = self.proj(h)
