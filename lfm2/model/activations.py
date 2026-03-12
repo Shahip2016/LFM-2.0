@@ -53,3 +53,29 @@ class SwiGLU(nn.Module):
             Output tensor of the same shape.
         """
         return self.w_down(F.silu(self.w_gate(x)) * self.w_up(x))
+
+class GeGLU(nn.Module):
+    """GeGLU feed-forward block.
+
+    Computes: ``output = W_down · (GELU(W_gate · x) ⊙ (W_up · x))``
+    """
+
+    def __init__(
+        self,
+        dim: int,
+        hidden_dim: int | None = None,
+        expansion_ratio: float = 8 / 3,
+        bias: bool = False,
+    ):
+        super().__init__()
+        if hidden_dim is None:
+            hidden_dim = int(dim * expansion_ratio)
+            hidden_dim = ((hidden_dim + 63) // 64) * 64
+
+        self.w_gate = nn.Linear(dim, hidden_dim, bias=bias)
+        self.w_up = nn.Linear(dim, hidden_dim, bias=bias)
+        self.w_down = nn.Linear(hidden_dim, dim, bias=bias)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass."""
+        return self.w_down(F.gelu(self.w_gate(x)) * self.w_up(x))
