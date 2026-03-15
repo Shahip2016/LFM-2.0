@@ -64,3 +64,12 @@ class CosineAnnealingWarmupRestarts(LRScheduler):
         self.last_epoch = math.floor(epoch)
         for param_group, lr in zip(self.optimizer.param_groups, self.get_lr()):
             param_group['lr'] = lr
+
+class ExponentialDecay(LRScheduler):
+    def __init__(self, optimizer, gamma=0.9, last_epoch=-1):
+        self.gamma = gamma
+        super(ExponentialDecay, self).__init__(optimizer, last_epoch)
+    def get_lr(self):
+        if self.last_epoch == 0:
+            return self.base_lrs
+        return [group['lr'] * self.gamma for group in self.optimizer.param_groups]
