@@ -88,3 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("Dashboard simulation started.");
     }
 });
+
+// Feature: Clear Output functionality
+document.addEventListener('DOMContentLoaded', () => {
+    const clearBtn = document.getElementById('clear-btn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            const outputContent = document.getElementById('output-content');
+            if (outputContent) outputContent.innerHTML = '';
+        });
+    }
+});
