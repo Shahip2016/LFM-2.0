@@ -10,6 +10,9 @@ from lfm2.model.backbone import LFM2Model, LFM2Config
 from lfm2.model.colbert import LFM2ColBERT, maxsim_score
 
 def run_demo():
+    import time
+    start_time = time.time()
+
     # 1. Initialize Model
     config = LFM2Config(n_layers=4, d_model=256, n_heads=4, n_kv_heads=2)
     backbone = LFM2Model(config)
@@ -52,6 +55,10 @@ def run_demo():
 
     for i, (score, doc) in enumerate(doc_scores):
         print(f"{i+1}. [Score: {score:.4f}] {doc}")
+
+
+    end_time = time.time()
+    print(f"Total inference time: {end_time - start_time:.4f} seconds")
 
 if __name__ == "__main__":
     run_demo()
