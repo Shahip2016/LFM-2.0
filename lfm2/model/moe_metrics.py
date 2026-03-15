@@ -44,3 +44,10 @@ class MoEMetricsTracker:
             'routing_probs_sum': self.routing_probs_sum,
             'total_tokens': self.total_tokens
         }
+
+class MoELoadBalancingMetric:
+    def __init__(self, num_experts):
+        self.num_experts = num_experts
+    def compute_loss(self, routing_probs):
+        expert_mean = routing_probs.mean(dim=0)
+        return (expert_mean * self.num_experts).var()
